@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mi api - Juan M. Cardona</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    .card-img {
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      width: 100%;
+      border-radius: 0.5rem;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+  <header class="max-w-6xl mx-auto p-6 flex items-center justify-between">
+    <h1 class="text-2xl font-semibold">Mi api :D (esto es solo una prueba)</h1>
+    <div>
+      <label for="limit" class="text-sm mr-2">Mostrar</label>
+      <select id="limit" class="border rounded px-2 py-1">
+        <option value="6">6</option>
+        <option value="9">9</option>
+        <option value="12" selected>12</option>
+        <option value="24">24</option>
+      </select>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto p-6">
+    <div id="grid" class="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
+
+    <div class="mt-6 flex justify-center">
+      <button id="loadMore" class="px-4 py-2 bg-slate-800 text-white rounded">Cargar más</button>
+    </div>
+  </main>
+
+  <template id="cardTpl">
+    <div class="bg-white p-3 rounded shadow-sm">
+      <img class="card-img" alt="Imagen" />
+      <div class="mt-2 text-sm">
+        <div class="font-medium author"></div>
+        <a class="text-xs text-sky-600 hover:underline external" target="_blank" rel="noopener noreferrer">Ver original</a>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    let page = 1;
+    const grid = document.getElementById('grid');
+    const tpl = document.getElementById('cardTpl');
+    const loadMoreBtn = document.getElementById('loadMore');
+    const limitSelect = document.getElementById('limit');
+
+    async function fetchImages({ page = 1, limit = 12 } = {}) {
+      try {
+        const res = await fetch(`/api/images?page=${page}&limit=${limit}`);
+        if (!res.ok) throw new Error('Error en la respuesta del servidor');
+        return await res.json();
+      } catch (err) {
+        console.error(err);
+        return { ok: false, images: [] };
+      }
+    }
+
+    function renderImages(images) {
+      const frag = document.createDocumentFragment();
+      images.forEach(img => {
+        const node = tpl.content.cloneNode(true);
+        const imgEl = node.querySelector('img');
+        const authorEl = node.querySelector('.author');
+        const linkEl = node.querySelector('.external');
+
+        imgEl.src = img.thumbnail;
+        imgEl.alt = `Foto por ${img.author}`;
+        authorEl.textContent = `Autor: ${img.author}`;
+        linkEl.href = img.original;
+        linkEl.textContent = 'Ver original';
+
+        frag.appendChild(node);
+      });
+      grid.appendChild(frag);
+    }
+
+    async function loadInitial() {
+      grid.innerHTML = '';
+      page = 1;
+      const limit = limitSelect.value;
+      const data = await fetchImages({ page, limit });
+      if (data.ok) renderImages(data.images);
+    }
+
+    loadMoreBtn.addEventListener('click', async () => {
+      page++;
+      const limit = limitSelect.value;
+      const data = await fetchImages({ page, limit });
+      if (data.ok && data.images.length) renderImages(data.images);
+      else {
+        loadMoreBtn.textContent = 'No hay más';
+        loadMoreBtn.disabled = true;
+      }
+    });
+
+    limitSelect.addEventListener('change', loadInitial);
+
+    loadInitial();
+  </script>
+</body>
+</html>
